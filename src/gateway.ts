@@ -52,7 +52,11 @@ export default class Gateway {
 
   public createServer(handler: RequestListener) {
     const server = createServer(handler);
-    this.io.attach(server);
+    this.io.attach(server, {
+      cors: {
+        origin: [process.env['RENDERER_SERVER']],
+      },
+    });
     return server;
   }
 }

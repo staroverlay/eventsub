@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
 
@@ -12,6 +13,11 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Middlewares.
+app.use(
+  cors({
+    origin: [process.env['RENDERER_SERVER']],
+  }),
+);
 app.use(express.json());
 
 // API routes.
@@ -23,7 +29,6 @@ app.post('/api/trigger/:widgetId', (req, res) => {
   if (!event || !data || !widgetId) {
     return res.status(400).json({ error: 'Bad request' });
   } else if (!secretKey || secretKey !== process.env['SECRET_KEY']) {
-    console.log(secretKey, process.env['SECRET_KEY']);
     return res.status(401).json({ error: 'Invalid X-Eventsub-Secret header' });
   }
 

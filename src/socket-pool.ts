@@ -40,25 +40,25 @@ export default class SocketPool {
 
     const subscriber: Subscriber = await this.createSubscriber(
       integration,
-    ).catch(() => null);
-    if (!subscriber) {
-      throw new Error('BAD_AUTH: Subscriber creation failed');
-    }
+    ).catch((e) => {
+      console.error(e);
+      throw new Error('BAD_AUTH: Subscriber creation failed. ' + e.message);
+    });
 
     socket.data = {
       widgetId: widget._id,
     };
 
     this.subscribers.set(socket.id, subscriber);
-    subscriber.subscribe(widget.scopes);
     subscriber.start();
+    subscriber.subscribe(widget.scopes);
     subscriber.onEvent((topic, event) => {
       socket.emit('event:' + topic, event);
     });
 
     const sockets = this.sockets.get(widget._id.toString());
     if (!sockets) {
-      this.sockets.set(integration.integrationId, new Set([socket]));
+      this.sockets.set(widget._id.toString(), new Set([socket]));
     } else {
       sockets.add(socket);
     }

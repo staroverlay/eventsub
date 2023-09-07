@@ -41,7 +41,9 @@ export async function createTwitchSubscriber(
 
   const craftHandler = (topic: Topic) => {
     return (event: any) => {
-      callback(topic, event);
+      const symbols = Object.getOwnPropertySymbols(event);
+      const data = event[symbols[0]];
+      callback(topic, data);
     };
   };
 
