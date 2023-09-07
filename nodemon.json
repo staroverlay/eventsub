@@ -1,0 +1,13 @@
+{
+  "delay": "0",
+  "exec": "yarn dev",
+  "execMap": {
+    "ts": "node -r ts-node/register"
+  },
+  "events": {
+    "start": "yarn lint"
+  },
+  "watch": ["src"],
+  "ext": "ts",
+  "ignore": ["node_modules", "dist"]
+}
