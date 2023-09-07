@@ -18,11 +18,12 @@ app.use(express.json());
 app.post('/api/trigger/:widgetId', (req, res) => {
   const { event, data } = req.body || {};
   const widgetId = req.params.widgetId;
-  const secretKey = req.headers['X-Eventsub-Secret'];
+  const secretKey = req.headers['x-eventsub-secret'];
 
   if (!event || !data || !widgetId) {
     return res.status(400).json({ error: 'Bad request' });
   } else if (!secretKey || secretKey !== process.env['SECRET_KEY']) {
+    console.log(secretKey, process.env['SECRET_KEY']);
     return res.status(401).json({ error: 'Invalid X-Eventsub-Secret header' });
   }
 
