@@ -10,15 +10,21 @@
     "dev": "cross-env NODE_ENV=development ts-node ./src",
     "lint": "tslint -c ./tslint.json -t stylish 'src/**/*.ts'",
     "start": "cross-env NODE_ENV=production node .",
-    "watch": "nodemon --config ./nodemon.json"
+    "watch": "nodemon --watch 'src/*.ts' --exec yarn dev"
   },
   "dependencies": {
+    "@twurple/api": "^7.0.1",
+    "@twurple/auth": "^7.0.1",
+    "@twurple/eventsub-ws": "^7.0.1",
+    "@types/socket.io": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "helmet": "^7.0.0",
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
+    "socket.io": "^4.7.2",
+    "twitch-oauth": "^0.3.1",
     "typescript": "^5.2.2"
   },
   "devDependencies": {
