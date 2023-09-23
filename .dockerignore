@@ -3,6 +3,7 @@ node_modules
 test
 .editorconfig
 .env.example
+.env
 .gitignore
 .travis.yml
 appveyor.yml

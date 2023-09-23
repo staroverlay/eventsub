@@ -1,19 +1,22 @@
-FROM node:alpine
+FROM openjdk:17-jdk-slim-buster
 
-# Create work directory
-WORKDIR /usr/app
+# Create tmp directory
+WORKDIR /tmp
 
-# Install runtime dependencies
-RUN npm install yarn -g
+# Copy source to temp directory
+COPY . .
 
-# Copy app source to work directory
-COPY . /usr/app
-
-# Install app dependencies
-RUN yarn install
+# Clean output directory
+RUN mvn clean
 
 # Build app
-RUN npm build
+RUN mvn package
+
+# Copy binary to work directory
+COPY target/staroverlay-eventsub-jar-with-dependencies.jar /app/app.jar
+
+# Set work directory
+WORKDIR /app
 
 # Run app
-CMD ["npm", "start"]
+CMD ["java", "-jar", "app.jar"]
