@@ -1,48 +1,36 @@
 package com.staroverlay.eventsub;
 
 import io.socket.engineio.server.EngineIoServer;
-import io.socket.engineio.server.EngineIoServerOptions;
-import io.socket.engineio.server.JettyWebSocketHandler;
 import io.socket.socketio.server.SocketIoServer;
-import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.http.pathmap.ServletPathSpec;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.websocket.server.WebSocketUpgradeFilter;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.websocket.server.JettyWebSocketServlet;
+import org.eclipse.jetty.websocket.server.JettyWebSocketServletFactory;
+import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class ServerWrapper {
-  private static AtomicInteger PORT_START = null;
+  private final Server server;
 
-  private final int mPort;
-  private final Server mServer;
-  private final EngineIoServerOptions eioOptions;
-  private final EngineIoServer mEngineIoServer;
-  private final SocketIoServer mSocketIoServer;
+  private final EngineIoServer engineIO;
+  private final SocketIoServer socketIO;
 
   public ServerWrapper(String ip, int port, String[] allowedCorsOrigins) {
-    PORT_START = new AtomicInteger(port);
-
-    mPort = PORT_START.getAndIncrement();
-    mServer = new Server(new InetSocketAddress(ip, mPort));
-    eioOptions = EngineIoServerOptions.newFromDefault();
-    eioOptions.setAllowedCorsOrigins(allowedCorsOrigins);
-
-    mEngineIoServer = new EngineIoServer(eioOptions);
-    mSocketIoServer = new SocketIoServer(mEngineIoServer);
+    this.server = new Server(new InetSocketAddress(ip, port));
+    this.engineIO = new EngineIoServer();
+    this.socketIO = new SocketIoServer(engineIO);
 
     System.setProperty("org.eclipse.jetty.util.log.class", "org.eclipse.jetty.util.log.StdErrLog");
     System.setProperty("org.eclipse.jetty.LEVEL", "OFF");
@@ -50,46 +38,50 @@ public final class ServerWrapper {
     ServletContextHandler servletContextHandler = new ServletContextHandler(ServletContextHandler.SESSIONS);
     servletContextHandler.setContextPath("/");
 
-    servletContextHandler.addServlet(new ServletHolder((Servlet) new HttpServlet() {
-      @Override
-      protected void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        mEngineIoServer.handleRequest(new HttpServletRequestWrapper(request) {
-          @Override
-          public boolean isAsyncSupported() {
-            return false;
-          }
-        }, response);
-      }
-    }), "/socket.io/*");
+    final JettyWebSocketServlet servlet = new JettyWebSocketServlet() {
+      private static final long serialVersionUID = 4525525859144703715L;
 
-    try {
-      WebSocketUpgradeFilter webSocketUpgradeFilter = WebSocketUpgradeFilter.configure(servletContextHandler);
-      webSocketUpgradeFilter.addMapping(
-          new ServletPathSpec("/socket.io/*"),
-          (servletUpgradeRequest, servletUpgradeResponse) -> new JettyWebSocketHandler(mEngineIoServer));
-    } catch (ServletException ex) {
-      ex.printStackTrace();
-    }
+      @Override
+      protected void configure(JettyWebSocketServletFactory jettyWebSocketServletFactory) {
+        jettyWebSocketServletFactory.addMapping(
+            "/",
+            (request, response) -> new JettyEngineIoWebSocketHandler(engineIO));
+      }
+
+      @Override
+      public void service(ServletRequest request, ServletResponse response) throws ServletException, IOException {
+        if (request instanceof HttpServletRequest) {
+          final String upgradeHeader = ((HttpServletRequest) request).getHeader("upgrade");
+          if (upgradeHeader != null) {
+            super.service(request, response);
+          } else {
+            engineIO.handleRequest((HttpServletRequest) request, (HttpServletResponse) response);
+          }
+        } else {
+          super.service(request, response);
+        }
+      }
+    };
+
+    final ServletHolder servletHolder = new ServletHolder(servlet);
+    servletHolder.setAsyncSupported(false);
+    servletContextHandler.addServlet(servletHolder, "/socket.io/*");
+    JettyWebSocketServletContainerInitializer.configure(servletContextHandler, null);
 
     HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(new Handler[] { servletContextHandler });
-    mServer.setHandler(handlerList);
+    this.server.setHandler(handlerList);
   }
 
   public void startServer() throws Exception {
-    mServer.start();
+    server.start();
   }
 
   public void stopServer() throws Exception {
-    mServer.stop();
-  }
-
-  public int getPort() {
-    return mPort;
+    server.stop();
   }
 
   public SocketIoServer getSocketIoServer() {
-    return mSocketIoServer;
+    return socketIO;
   }
-
 }

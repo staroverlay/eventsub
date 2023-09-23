@@ -19,7 +19,7 @@ public class Environment {
     dotenv.entries().forEach(e -> System.setProperty(e.getKey(), e.getValue()));
 
     Environment.HOST = System.getProperty("ENV", "production");
-    Environment.HOST = System.getProperty("HOST");
+    Environment.HOST = System.getProperty("HOST", "127.0.0.1");
     Environment.PORT = Integer.parseInt(System.getProperty("PORT", "3000"));
     Environment.MONGODB_URI = System.getProperty("MONGODB_URI");
     Environment.RENDERER_SERVER = System.getProperty("RENDERER_SERVER");
